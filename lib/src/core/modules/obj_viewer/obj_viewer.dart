@@ -1,10 +1,12 @@
 import 'package:flutter/widgets.dart' hide Image;
 import 'package:flutter_3d_controller/src/core/exception/flutter_3d_controller_exception.dart';
+import 'package:path/path.dart' as p;
 import 'package:vector_math/vector_math_64.dart';
 import 'scene.dart';
 
 typedef SceneCreatedCallback = void Function(
-    Scene scene, String modelName, String? modelUrl);
+    Scene scene, String modelName, String? modelUrl,
+    {bool isAsset});
 
 class ObjViewer extends StatefulWidget {
   const ObjViewer({
@@ -59,8 +61,9 @@ class _ObjViewerState extends State<ObjViewer> {
     // prevent setState() or markNeedsBuild called during build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final modelSrcData = _parseModelSrc(widget.src);
-      widget.onSceneCreated
-          ?.call(scene, modelSrcData[0] ?? widget.src, modelSrcData[1]);
+      widget.onSceneCreated?.call(
+          scene, modelSrcData.name ?? widget.src, modelSrcData.url,
+          isAsset: modelSrcData.isAsset);
     });
   }
 
@@ -74,8 +77,9 @@ class _ObjViewerState extends State<ObjViewer> {
       );
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final modelSrcData = _parseModelSrc(widget.src);
-        widget.onSceneCreated
-            ?.call(scene, modelSrcData[0] ?? widget.src, modelSrcData[1]);
+        widget.onSceneCreated?.call(
+            scene, modelSrcData.name ?? widget.src, modelSrcData.url,
+            isAsset: modelSrcData.isAsset);
       });
     }
   }
@@ -122,23 +126,22 @@ Vector2 toVector2(Offset value) {
   return Vector2(value.dx, value.dy);
 }
 
-List<String?> _parseModelSrc(String src) {
-  List<String?> result = List.filled(2, null, growable: false);
+({String? name, String? url, bool isAsset}) _parseModelSrc(String src) {
   if (!src.toLowerCase().endsWith('.obj')) {
     throw Flutter3dControllerFormatException();
   } else if (src.startsWith('http://') || src.startsWith('https://')) {
     //model is loading from url
     String modelName = src.substring(src.lastIndexOf('/') + 1);
     String modelPath = src.substring(0, src.lastIndexOf('/') + 1);
-    result[0] = modelName;
-    result[1] = modelPath;
+    return (name: modelName, url: modelPath, isAsset: false);
+  } else if (src.startsWith('file://') || p.isAbsolute(src)) {
+    //model is loading from local file
+    return (name: src, url: null, isAsset: false);
   } else if (src.contains('assets')) {
     //model is loading from local asset
-    result[0] = src;
-    result[1] = null;
+    return (name: src, url: null, isAsset: true);
   } else {
     throw Flutter3dControllerFormatException(
         message: 'Cannot Parse the model source.');
   }
-  return result;
 }

@@ -113,7 +113,7 @@ class _Flutter3DViewerState extends State<Flutter3DViewer> {
         ? ObjViewer(
             src: widget.src,
             interactive: widget.enableTouch,
-            onSceneCreated: (scene, modelName, modelUrl) {
+            onSceneCreated: (scene, modelName, modelUrl, {bool? isAsset}) {
               scene.camera.position.z = widget.cameraZ ?? 10;
               scene.camera.target.y = widget.cameraY ?? 0;
               scene.camera.target.x = widget.cameraX ?? 0;
@@ -123,6 +123,7 @@ class _Flutter3DViewerState extends State<Flutter3DViewer> {
                       widget.scale ?? 5.0),
                   fileName: modelName,
                   url: modelUrl,
+                  isAsset: isAsset ?? true,
                   onProgress: widget.onProgress,
                   onLoad: (modelAddress) {
                     widget.onLoad?.call(modelAddress);
