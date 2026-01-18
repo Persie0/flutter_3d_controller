@@ -159,8 +159,9 @@ class ModelViewerState extends State<ModelViewer> {
           if (url.isAbsolute && !url.isScheme('file')) {
             await response.redirect(url);
           } else {
-            final data = await (url.isScheme('file')
-                ? _readFile(url.path)
+            final bool isFile = url.isScheme('file') || p.isAbsolute(url.path);
+            final data = await (isFile
+                ? _readFile(url.isScheme('file') ? url.toFilePath() : url.path)
                 : _readAsset(url.path));
             response
               ..statusCode = HttpStatus.ok
@@ -184,6 +185,24 @@ class ModelViewerState extends State<ModelViewer> {
             await response.redirect(request.uri);
           } else if (request.uri.hasAbsolutePath) {
             // Some gltf models need other resources from the origin
+            if (url.isScheme('file') || p.isAbsolute(url.path)) {
+              final String parentDir = p.dirname(
+                  url.isScheme('file') ? url.toFilePath() : url.path);
+              final String filePath = p.join(
+                  parentDir, request.uri.path.replaceFirst('/', ''));
+              final file = File(filePath);
+              if (await file.exists()) {
+                final data = await file.readAsBytes();
+                response
+                  ..statusCode = HttpStatus.ok
+                  ..headers.add('Content-Type', 'application/octet-stream')
+                  ..headers.add('Content-Length', data.lengthInBytes.toString())
+                  ..headers.add('Access-Control-Allow-Origin', '*')
+                  ..add(data);
+                await response.close();
+                break;
+              }
+            }
             final pathSegments = [...url.pathSegments]..removeLast();
             final tryDestination = p.joinAll([
               url.origin,
