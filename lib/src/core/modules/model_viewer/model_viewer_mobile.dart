@@ -203,14 +203,29 @@ class ModelViewerState extends State<ModelViewer> {
                 break;
               }
             }
-            final pathSegments = [...url.pathSegments]..removeLast();
-            final tryDestination = p.joinAll([
-              url.origin,
-              ...pathSegments,
-              request.uri.path.replaceFirst('/', ''),
-            ]);
-            debugPrint('Try: $tryDestination');
-            await response.redirect(Uri.parse(tryDestination));
+            if (url.hasScheme && !url.isScheme('file')) {
+              // For remote http(s) URLs use proper URI resolution.
+              // url.resolve() is safe for any URI with a scheme and
+              // avoids calling url.origin, which throws for scheme-less
+              // URIs (e.g. raw absolute filesystem paths like /data/...).
+              final tryDestination = url
+                  .resolve(request.uri.path.replaceFirst('/', ''));
+              debugPrint('Try: $tryDestination');
+              await response.redirect(tryDestination);
+            } else {
+              // For file:// and scheme-less local paths the sibling-file
+              // lookup above already ran and found nothing – redirecting
+              // to another local path would not help, so return 404.
+              debugPrint('404 with ${request.uri}');
+              final text =
+                  utf8.encode("Resource '${request.uri}' not found");
+              response
+                ..statusCode = HttpStatus.notFound
+                ..headers.add('Content-Type', 'text/plain;charset=UTF-8')
+                ..headers.add('Content-Length', text.length.toString())
+                ..add(text);
+              await response.close();
+            }
           } else {
             debugPrint('404 with ${request.uri}');
             final text = utf8.encode("Resource '${request.uri}' not found");
