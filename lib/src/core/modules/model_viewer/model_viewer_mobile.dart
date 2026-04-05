@@ -214,8 +214,7 @@ class ModelViewerState extends State<ModelViewer> {
               await response.redirect(Uri.parse(tryDestination));
             } else {
               debugPrint('404 with ${request.uri}');
-              final text = utf8
-                  .encode("Resource '${request.uri}' not found locally");
+              final text = utf8.encode("Resource '${request.uri}' not found");
               response
                 ..statusCode = HttpStatus.notFound
                 ..headers.add('Content-Type', 'text/plain;charset=UTF-8')
