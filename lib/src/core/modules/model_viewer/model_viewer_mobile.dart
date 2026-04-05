@@ -203,14 +203,27 @@ class ModelViewerState extends State<ModelViewer> {
                 break;
               }
             }
-            final pathSegments = [...url.pathSegments]..removeLast();
-            final tryDestination = p.joinAll([
-              url.origin,
-              ...pathSegments,
-              request.uri.path.replaceFirst('/', ''),
-            ]);
-            debugPrint('Try: $tryDestination');
-            await response.redirect(Uri.parse(tryDestination));
+            if (url.isScheme('http') || url.isScheme('https')) {
+              final pathSegments = [...url.pathSegments]..removeLast();
+              final tryDestination = p.joinAll([
+                url.origin,
+                ...pathSegments,
+                request.uri.path.replaceFirst('/', ''),
+              ]);
+              debugPrint('Try: $tryDestination');
+              await response.redirect(Uri.parse(tryDestination));
+            } else {
+              debugPrint('404 with ${request.uri}');
+              final text = utf8
+                  .encode("Resource '${request.uri}' not found locally");
+              response
+                ..statusCode = HttpStatus.notFound
+                ..headers.add('Content-Type', 'text/plain;charset=UTF-8')
+                ..headers.add('Content-Length', text.length.toString())
+                ..add(text);
+              await response.close();
+            }
+            break;
           } else {
             debugPrint('404 with ${request.uri}');
             final text = utf8.encode("Resource '${request.uri}' not found");
